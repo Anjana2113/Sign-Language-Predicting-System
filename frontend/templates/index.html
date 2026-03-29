@@ -420,12 +420,12 @@
                 const res = await fetch(`/get_landmark/${encodeURIComponent(char)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    return data.landmarks;
+                    return { hand0: data.hand0, hand1: data.hand1 };
                 }
             } catch (e) {
                 console.error(e);
             }
-            return null;
+            return { hand0: null, hand1: null };
         }
 
         async function playSignAnimation(letters) {
@@ -436,8 +436,8 @@
             // fetch all landmarks beforehand to guarantee smooth animation
             const timeline = [];
             for (let char of letters) {
-                const lm = await fetchLandmarks(char);
-                timeline.push({ char, lm });
+                const hands = await fetchLandmarks(char);
+                timeline.push({ char, ...hands });
             }
             
             let idx = 0;
@@ -451,11 +451,16 @@
                     return;
                 }
                 
-                const { char, lm } = timeline[idx];
+                const { char, hand0, hand1 } = timeline[idx];
                 overlay.innerText = char === " " ? "SPACE" : char;
                 
-                if (lm) {
-                    drawSkeleton(ctx, lm, canvas.width, canvas.height);
+                const hasBoth = !!(hand0 && hand1);
+                
+                if (hand0) {
+                    drawSkeleton(ctx, hand0, canvas.width, canvas.height, false, hasBoth);
+                }
+                if (hand1) {
+                    drawSkeleton(ctx, hand1, canvas.width, canvas.height, true, hasBoth);
                 }
                 
                 idx++;
@@ -467,10 +472,16 @@
             playInterval = setInterval(drawFrame, 1200);
         }
         
-        function drawSkeleton(ctx, landmarks, w, h) {
+        function drawSkeleton(ctx, landmarks, w, h, isSecondary, hasBoth) {
             // landmarks are [x,y] normalized around wrist (0,0)
             const scale = Math.min(w, h) * 0.45;
-            const cx = w / 2;
+            
+            let cx = w / 2;
+            if (hasBoth) {
+                // Offset left hand to left, right hand to right
+                cx = isSecondary ? (w / 2) + (w * 0.15) : (w / 2) - (w * 0.15);
+            }
+            
             const cy = h * 0.8; // wrist position (bottom center)
             
             const pxPts = landmarks.map(pt => [

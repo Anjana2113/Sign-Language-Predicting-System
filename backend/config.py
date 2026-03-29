@@ -2,6 +2,10 @@
 config.py — Configuration for Sign Language Project
 """
 import os
+from dotenv import load_dotenv
+
+# Load .env file automatically (safe to call even if no .env exists)
+load_dotenv()
 
 # Project Roots
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

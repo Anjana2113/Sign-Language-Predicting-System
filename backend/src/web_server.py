@@ -18,8 +18,8 @@ from src.sign_landmark_data import get_landmark_provider
 from flask import request
 
 app = Flask(__name__, 
-            template_folder=os.path.join(Path(__file__).parent.parent, 'templates'),
-            static_folder=os.path.join(Path(__file__).parent.parent, 'static'))
+            template_folder=os.path.join(Path(__file__).parent.parent.parent, 'frontend', 'templates'),
+            static_folder=os.path.join(Path(__file__).parent.parent.parent, 'frontend', 'static'))
 
 # Initialize components
 detector = GestureDetector()
@@ -184,13 +184,17 @@ def text_to_sign():
 @app.route('/get_landmark/<char>')
 def get_landmark(char):
     if char == " " or not char:
-        return jsonify({"char": char, "landmarks": None})
+        return jsonify({"char": char, "hand0": None, "hand1": None})
         
-    landmarks = landmark_provider.get_landmarks(char)
-    if not landmarks:
-        return jsonify({"char": char, "landmarks": None}), 404
+    landmarks_data = landmark_provider.get_landmarks(char)
+    if not landmarks_data:
+        return jsonify({"char": char, "hand0": None, "hand1": None}), 404
         
-    return jsonify({"char": char, "landmarks": landmarks})
+    return jsonify({
+        "char": char, 
+        "hand0": landmarks_data.get("hand0"), 
+        "hand1": landmarks_data.get("hand1")
+    })
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=False)

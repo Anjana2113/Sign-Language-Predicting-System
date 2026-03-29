@@ -36,7 +36,11 @@ class SignLanguageApp:
         
         # Load Model
         if os.path.exists(config.LANDMARK_MODEL_PATH):
-            self.model = tf.keras.models.load_model(config.LANDMARK_MODEL_PATH)
+            try:
+                import tf_keras as tfk
+                self.model = tfk.models.load_model(config.LANDMARK_MODEL_PATH)
+            except ImportError:
+                self.model = tf.keras.models.load_model(config.LANDMARK_MODEL_PATH)
         else:
             print(" [ERROR] Landmark model not found.")
             sys.exit(1)

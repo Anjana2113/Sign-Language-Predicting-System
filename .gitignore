@@ -14,12 +14,12 @@ venv/
 .vscode/
 
 # Keep the trained models for a ready-to-run repository
-!models/sign_landmark_model.keras
-!models/hand_landmarker.task
+!backend/models/sign_landmark_model.keras
+!backend/models/hand_landmarker.task
 
 # Exclude large raw data files
 *.npy
-data/dataset/
+backend/data/dataset/
 
 # Scratch / debug files
 api_err.txt
