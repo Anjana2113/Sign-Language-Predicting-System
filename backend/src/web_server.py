@@ -48,6 +48,12 @@ ai_sentence = ""
 latest_label = "?"
 latest_confidence = 0.0
 
+# Auto-append tracking
+last_auto_appended_label = None
+stable_frame_count = 0
+prev_label = "?"  # Tracks the PREVIOUS frame's label for stability comparison
+STABILITY_THRESHOLD = 20 # frames (~0.7s at 30 fps)
+
 def get_best_camera():
     for idx in [0, 1, 2, 3]:
         cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
@@ -58,7 +64,7 @@ def get_best_camera():
     return None
 
 def generate_frames():
-    global latest_label, latest_confidence
+    global latest_label, latest_confidence, last_auto_appended_label, stable_frame_count, prev_label, current_sentence
     cap = get_best_camera()
     if not cap:
         print(" [ERROR] No camera found.")
@@ -89,6 +95,30 @@ def generate_frames():
             latest_label = best_label
             latest_confidence = best_conf
 
+            # --- Auto-Append Logic ---
+            # Compare best_label with PREVIOUS frame's label (not current latest_label
+            # which was just set above) to correctly detect stability.
+            if best_label != "?" and best_conf > 0.85:
+                if best_label == prev_label:
+                    stable_frame_count += 1
+                else:
+                    # New gesture detected — reset counter
+                    stable_frame_count = 1
+                    last_auto_appended_label = None  # Allow re-appending new sign immediately
+
+                if stable_frame_count >= STABILITY_THRESHOLD:
+                    if best_label != last_auto_appended_label:
+                        current_sentence += best_label
+                        last_auto_appended_label = best_label
+                        print(f" [Auto-Append] Added '{best_label}' (held for {stable_frame_count} frames)")
+                    stable_frame_count = 0  # Reset so same sign can be appended again after another hold
+            else:
+                # Hand removed or low confidence — full reset
+                stable_frame_count = 0
+                last_auto_appended_label = None  # Allow repeating same sign after release
+
+            prev_label = best_label  # Save for next frame comparison
+
             # Encode frame
             ret, buffer = cv2.imencode('.jpg', annotated_frame)
             frame = buffer.tobytes()
@@ -118,7 +148,7 @@ def get_state():
 
 @app.route('/action/<name>')
 def handle_action(name):
-    global current_sentence, latest_label
+    global current_sentence, latest_label, ai_sentence, last_auto_appended_label, stable_frame_count
     if name == "ADD":
         if latest_label != "?":
             current_sentence += latest_label
@@ -129,6 +159,8 @@ def handle_action(name):
     elif name == "CLEAR":
         current_sentence = ""
         ai_sentence = ""
+        last_auto_appended_label = None  # Reset so a fresh sign session can start
+        stable_frame_count = 0
     return jsonify({"status": "ok", "sentence": current_sentence, "ai_sentence": ai_sentence})
 
 @app.route('/apply_suggestion/<word>')

@@ -563,10 +563,23 @@
         function updateDisplay(sentence, ai_sentence) {
             const raw = document.getElementById('raw-signs');
             const meaningful = document.getElementById('meaningful-text');
+            const ttsInput = document.getElementById('tts-input');
             
             raw.innerText = sentence || "...";
+            
+            // Sync current sentence with the Text-to-Sign textarea if it's different
+            // and the user isn't currently typing (focused)
+            if (ttsInput && document.activeElement !== ttsInput) {
+                if (ttsInput.value !== sentence) {
+                    ttsInput.value = sentence || "";
+                }
+            }
+
+            // Always update the meaningful text - this ensures it clears when ai_sentence is ""
             if (ai_sentence) {
                 meaningful.innerText = ai_sentence;
+            } else {
+                meaningful.innerText = "Waiting for AI...";
             }
         }
 
